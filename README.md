@@ -1,8 +1,6 @@
 Introduction
 ============
 
-Note: this branch is compatible with releases of Symfony2 in the 2.0.x branch.
-
 This Bundle enables integration of the Facebook PHP and JS SDK's. Furthermore it
 also provides a Symfony2 authentication provider so that users can login to a
 Symfony2 application via Facebook. Furthermore via custom user provider support
@@ -19,7 +17,7 @@ For step 1. and 2. there are two options:
 
   1. Select "OAuth Migration" in the Facebook application settings.
   2. Add a Facebook login button, this approach requires JS code to handle step 3.
-  3. Letting the FOSFacebookBundle redirecting to the Facebook login page
+  3. Letting FOSFacebookBundle redirect to the Facebook login page.
 
 Note that the later happens automatically if the first provider in your first
 firewall configuration is configured to FOSFacebookBundle and the user accesses
@@ -30,9 +28,9 @@ https://developers.facebook.com/docs/guides/web/
 
 Please also refer to the official documentation of the SecurityBundle, especially
 for details on the configuration:
-http://symfony.com/doc/2.0/book/security/authentication.html
+http://symfony.com/doc/current/book/security.html
 
-[![Build Status](https://secure.travis-ci.org/FriendsOfSymfony/FOSFacebookBundle.png?branch=2.0)](http://travis-ci.org/FriendsOfSymfony/FOSFacebookBundle)
+[![Build Status](https://secure.travis-ci.org/FriendsOfSymfony/FOSFacebookBundle.png?branch=master)](http://travis-ci.org/FriendsOfSymfony/FOSFacebookBundle)
 
 Installation
 ============
@@ -45,20 +43,20 @@ Installation
             [FOSFacebookBundle]
                 git=git://github.com/FriendsOfSymfony/FOSFacebookBundle.git
                 target=/bundles/FOS/FacebookBundle
-                version=origin/2.0
+                version=origin/master
             
             [FacebookSDK]
-                git=git://github.com/facebook/php-sdk.git
+                git=git://github.com/facebook/facebook-php-sdk.git
                 target=/facebook
 
         Run the vendors script:
 
-            ./bin/vendors install
+            php bin/vendors install
 
       * Using git submodules.
 
             $ git submodule add git://github.com/FriendsOfSymfony/FOSFacebookBundle.git vendor/bundles/FOS/FacebookBundle
-            $ git submodule add git://github.com/facebook/php-sdk.git vendor/facebook
+            $ git submodule add git://github.com/facebook/facebook-php-sdk.git vendor/facebook
 
   2. Add the FOS namespace to your autoloader:
 
@@ -123,9 +121,6 @@ Installation
 
           # application/config/config.yml
           security:
-              factories:
-                  - "%kernel.root_dir%/../vendor/bundles/FOS/FacebookBundle/Resources/config/security_factories.xml"
-
               firewalls:
                   public:
                       # since anonymous is allowed users will not be forced to login
@@ -151,13 +146,10 @@ Installation
 
           # application/config/config.yml
           security:
-              factories:
-                    - "%kernel.root_dir%/../vendor/bundles/FOS/FacebookBundle/Resources/config/security_factories.xml"
-
               providers:
                   # choose the provider name freely
                   my_fos_facebook_provider:
-                      id: my.facebook.user   # see "Example Customer User Provider using the FOS\UserBundle" chapter further down
+                      id: my.facebook.user   # see "Example Custom User Provider using the FOS\UserBundle" chapter further down
 
               firewalls:
                   public:
@@ -260,7 +252,7 @@ check for `response.session` to redirect to the "logout" route:
 
     <script>
       function goLogIn(){
-          window.location = "{{ path('_security_check') }}";
+          window.location.href = "{{ path('_security_check') }}";
       }
     
       function onFbInit() {
@@ -269,7 +261,7 @@ check for `response.session` to redirect to the "logout" route:
                   if (response.session || response.authResponse) {
                       setTimeout(goLogIn, 500);
                   } else {
-                      window.location = "{{ path('_security_logout') }}";
+                      window.location.href = "{{ path('_security_logout') }}";
                   }
               });
           }
@@ -277,7 +269,7 @@ check for `response.session` to redirect to the "logout" route:
     </script>
 
 
-Example Customer User Provider using the FOS\UserBundle
+Example Custom User Provider using the FOS\UserBundle
 -------------------------------------------------------
 
 This requires adding a service for the custom user provider which is then set
@@ -326,7 +318,7 @@ to the provider id in the "provider" section in the config.yml:
 
         public function findUserByFbId($fbId)
         {
-            return $this->userManager->findUserBy(array('facebookID' => $fbId));
+            return $this->userManager->findUserBy(array('facebookId' => $fbId));
         }
 
         public function loadUserByUsername($username)
@@ -344,7 +336,6 @@ to the provider id in the "provider" section in the config.yml:
                     $user = $this->userManager->createUser();
                     $user->setEnabled(true);
                     $user->setPassword('');
-                    $user->setAlgorithm('');
                 }
 
                 // TODO use http://developers.facebook.com/docs/api/realtime
@@ -375,30 +366,37 @@ to the provider id in the "provider" section in the config.yml:
     }
 
 Finally one also needs to add a getFacebookId() and setFBData() method to the User model.
-The following example also adds "firstname" and "lastname" properties:
+The following example also adds "firstname" and "lastname" properties, using the Doctrine ORM:
 
     <?php
 
     namespace Acme\MyBundle\Entity;
 
     use FOS\UserBundle\Entity\User as BaseUser;
+    use Doctrine\ORM\Mapping as ORM;
 
     class User extends BaseUser
     {
         /**
          * @var string
+         *
+         * @ORM\Column(name="firstname", type="string", length=255)
          */
         protected $firstname;
 
         /**
          * @var string
+         *
+         * @ORM\Column(name="lastname", type="string", length=255)
          */
         protected $lastname;
 
         /**
          * @var string
+         *
+         * @ORM\Column(name="facebookId", type="string", length=255)
          */
-        protected $facebookID;
+        protected $facebookId;
 
 
         public function serialize()
@@ -456,22 +454,22 @@ The following example also adds "firstname" and "lastname" properties:
         }
 
         /**
-         * @param string $facebookID
+         * @param string $facebookId
          * @return void
          */
-        public function setFacebookID($facebookID)
+        public function setFacebookId($facebookId)
         {
-            $this->facebookID = $facebookID;
-            $this->setUsername($facebookID);
+            $this->facebookId = $facebookId;
+            $this->setUsername($facebookId);
             $this->salt = '';
         }
 
         /**
          * @return string
          */
-        public function getFacebookID()
+        public function getFacebookId()
         {
-            return $this->facebookID;
+            return $this->facebookId;
         }
 
         /**
@@ -480,7 +478,7 @@ The following example also adds "firstname" and "lastname" properties:
         public function setFBData($fbdata)
         {
             if (isset($fbdata['id'])) {
-                $this->setFacebookID($fbdata['id']);
+                $this->setFacebookId($fbdata['id']);
                 $this->addRole('ROLE_FACEBOOK');
             }
             if (isset($fbdata['first_name'])) {
