@@ -77,6 +77,15 @@ class FacebookHelper extends Helper
         ));
     }
 
+    public function loginUrl($parameters = array())
+    {
+        if (!isset($parameters['scope'])) {
+            $parameters['scope'] = implode(',', $this->scope);
+        }
+
+        return $this->facebook->getLoginUrl($parameters);
+    }
+
     /**
      * @codeCoverageIgnore
      */
